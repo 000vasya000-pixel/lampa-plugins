@@ -41,10 +41,31 @@
 
             var pageUrl = 'https://api.boosty.to/v1/blog/hugheyvr/post/?limit=20&comments_limit=0&reply_limit=0&is_only_allowed=true';
             if (offset) pageUrl += '&offset=' + encodeURIComponent(offset);
-            var requestUrl = window.god_enabled ? pageUrl : 'https://cors-anywhere.com/' + pageUrl;
+            var useAllOrigins = !window.god_enabled && !token;
+            var requestUrl = pageUrl;
+            var requestHeaders = headers;
+            if (useAllOrigins) {
+                requestUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(pageUrl);
+                requestHeaders = {};
+            } else if (!window.god_enabled) {
+                requestUrl = 'https://cors-anywhere.com/' + pageUrl;
+            }
 
             network.timeout(20000);
             network[window.god_enabled ? 'native' : 'silent'](requestUrl, function (response) {
+                if (useAllOrigins) {
+                    if (!response || typeof response.contents !== 'string') {
+                        reject(new Error('Invalid response from AllOrigins proxy'));
+                        return;
+                    }
+                    try {
+                        response = JSON.parse(response.contents);
+                    } catch (error) {
+                        reject(new Error('Could not parse Boosty response from AllOrigins proxy: ' + error.message));
+                        return;
+                    }
+                }
+
                 if (!response || !Array.isArray(response.data)) {
                     reject(new Error('Invalid response from Boosty'));
                     return;
@@ -85,7 +106,7 @@
                     total_pages: isLast ? page : page + 1,
                 });
             }, reject, false, {
-                headers: headers,
+                headers: requestHeaders,
             });
         }
 
