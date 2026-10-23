@@ -41,9 +41,13 @@
 
             var pageUrl = 'https://api.boosty.to/v1/blog/hugheyvr/post/?limit=20&comments_limit=0&reply_limit=0&is_only_allowed=true';
             if (offset) pageUrl += '&offset=' + encodeURIComponent(offset);
+            var requestUrl = pageUrl;
+            if (!window.god_enabled && Lampa.Utils && typeof Lampa.Utils.proxyUrl === 'function') {
+                requestUrl = Lampa.Utils.proxyUrl(pageUrl) || pageUrl;
+            }
 
             network.timeout(20000);
-            network[window.god_enabled ? 'native' : 'silent'](pageUrl, function (response) {
+            network[window.god_enabled ? 'native' : 'silent'](requestUrl, function (response) {
                 if (!response || !Array.isArray(response.data)) {
                     reject(new Error('Invalid response from Boosty'));
                     return;
